@@ -14,7 +14,7 @@ app.get('/people',
 
 app.get('/planets',
     retrieveAllPlanets,
-    // jsonResponse
+    jsonResponse
 );
 
 function retrieveAllPeople(req, res, next) {
@@ -33,7 +33,6 @@ async function retrieveAllPlanets(req, res, next) {
 }
 
 async function getAllPlanets(url, res, next){
-    // let all = [];
     let all = [];
     // let data = await retrievePlanets(url, res, next);
     // all = all.push.apply(all, JSON.parse(data).results)
@@ -50,11 +49,10 @@ async function getAllPlanets(url, res, next){
     for (i = 1; i < 8; i++) {
         console.log(i);
         let data = await request(base_url + "planets/?page=" + i, handleApiResponse(res, next));
-        // let data = await retrievePlanets("https://swapi.co/api/planets/?page=" + i, res, next);
         await all.push.apply(all, JSON.parse(data).results);
     };
-    // console.log(all);
-    return all;
+    res.locals.results = all;
+    return next();
 }
 
 function handleApiResponse(res, next) {
@@ -66,18 +64,17 @@ function handleApiResponse(res, next) {
         };
         return next();
       }
-    //   console.log(JSON.parse(body).results);
-    console.log("Glad?");
-      res.locals = {
-        success: true,
-        results: JSON.parse(body).results
-      };
-      return next();
+        res.locals = {
+            success: true,
+            results: JSON.parse(body).results
+        };
     };
+    
   }
 
 function jsonResponse(req, res, next) {
-  return res.json(res.locals);
+    console.log("This is the one");
+    return res.json(res.locals);
 }
 
 const server = app.listen(3000, () => {
