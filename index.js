@@ -1,5 +1,5 @@
 const express = require('express');
-const request = require('request');
+const request = require('request-promise');
 const cors = require('cors');
 const app = express();
 
@@ -14,7 +14,7 @@ app.get('/people',
 
 app.get('/planets',
     retrieveAllPlanets,
-    jsonResponse
+    // jsonResponse
 );
 
 function retrieveAllPeople(req, res, next) {
@@ -22,28 +22,59 @@ function retrieveAllPeople(req, res, next) {
     request(url, handleApiResponse(res, next));
 }
 
-function retrieveAllPlanets(req, res, next) {
+// function retrieveAllPlanets(req, res, next) {
+//     const url = base_url + "planets/";
+//     request(url, handleApiResponse(res, next));
+// }
+
+async function retrieveAllPlanets(req, res, next) {
     const url = base_url + "planets/";
-    request(url, handleApiResponse(res, next));
+    await getAllPlanets(url, res, next);
 }
 
+async function getAllPlanets(url, res, next){
+    // let all = [];
+    let all = [];
+    // let data = await retrievePlanets(url, res, next);
+    // all = all.push.apply(all, JSON.parse(data).results)
+    // let keepGoing = true
+    // while(keepGoing) {
+    //     console.log("Blarg Blarg Blarg");
+    //     let data = await retrievePlanets(data.results.next, res, next);
+    //     // data = await request(data.results.next, handleApiResponse(res, next));
+    //     await all.push.apply(all, JSON.parse(data).results)
+    //     if (JSON.parse(data).next !== null){
+    //         keepGoing = false;
+    //     }
+    // }
+    for (i = 1; i < 8; i++) {
+        console.log(i);
+        let data = await request(base_url + "planets/?page=" + i, handleApiResponse(res, next));
+        // let data = await retrievePlanets("https://swapi.co/api/planets/?page=" + i, res, next);
+        await all.push.apply(all, JSON.parse(data).results);
+    };
+    // console.log(all);
+    return all;
+}
 
 function handleApiResponse(res, next) {
-  return (err, response, body) => {
-    if (err || body[0] === '<') {
+    return (err, response, body) => {
+      if (err || body[0] === '<') {
+        res.locals = {
+          success: false,
+          error: err || 'Invalid request. Please check your state variable.'
+        };
+        return next();
+      }
+    //   console.log(JSON.parse(body).results);
+    console.log("Glad?");
       res.locals = {
-        success: false,
-        error: err || 'Invalid request. Please check your parameters.'
+        success: true,
+        results: JSON.parse(body).results
       };
       return next();
-    }
-    res.locals = {
-      success: true,
-      results: JSON.parse(body).results
     };
-    return next();
-  };
-}
+  }
 
 function jsonResponse(req, res, next) {
   return res.json(res.locals);
