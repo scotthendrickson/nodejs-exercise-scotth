@@ -43,20 +43,12 @@ async function getAllPeople(url, res, next) {
     await all.push.apply(all, JSON.parse(data).results);
     let keepGoing = true
     while (keepGoing) {
-        console.log("Blarg Blarg Blarg");
-        // let data = await retrievePlanets(data.results.next, res, next);
         data = await request(JSON.parse(data).next, handleApiResponse(res, next));
         await all.push.apply(all, JSON.parse(data).results)
-        console.log(JSON.parse(data).next);
         if (JSON.parse(data).next == null) {
             keepGoing = false;
         }
     }
-    // for (i = 1; i < 8; i++) {
-    //     console.log(i);
-    //     let data = await request(base_url + "planets/?page=" + i, handleApiResponse(res, next));
-    //     await all.push.apply(all, JSON.parse(data).results);
-    // };
     res.locals.results = all;
     return next();
 }
@@ -64,25 +56,31 @@ async function getAllPeople(url, res, next) {
 async function getAllPlanets(url, res, next){
     let all = [];
     let data = await request(url, handleApiResponse(res, next));
-    await all.push.apply(all, JSON.parse(data).results);
+    data = JSON.parse(data);
+    data = await getIndividualPeople(data, res, next);
+    await all.push.apply(all, data.results);
     let keepGoing = true
     while(keepGoing) {
-        console.log("Blarg Blarg Blarg");
-        // let data = await retrievePlanets(data.results.next, res, next);
-        data = await request(JSON.parse(data).next, handleApiResponse(res, next));
-        await all.push.apply(all, JSON.parse(data).results)
-        console.log(JSON.parse(data).next);
-        if (JSON.parse(data).next == null){
+        data = await request(data.next, handleApiResponse(res, next));
+        data = JSON.parse(data);
+        data = await getIndividualPeople(data, res, next);
+        await all.push.apply(all, data.results)
+        if (data.next == null){
             keepGoing = false;
         }
     }
-    // for (i = 1; i < 8; i++) {
-    //     console.log(i);
-    //     let data = await request(base_url + "planets/?page=" + i, handleApiResponse(res, next));
-    //     await all.push.apply(all, JSON.parse(data).results);
-    // };
     res.locals.results = all;
     return next();
+}
+
+async function getIndividualPeople(data, res, next){
+    for (i = 0; i < data.results.length; i++) {
+        for (x = 0; x < data.results[i].residents.length; x++) {
+            let person = await request(data.results[i].residents[x], handleApiResponse(res, next));
+            data.results[i].residents[x] = JSON.parse(person).name;
+        }
+    }
+    return data;
 }
 
 function handleApiResponse(res, next) {
@@ -103,7 +101,6 @@ function handleApiResponse(res, next) {
   }
 
 function jsonResponse(req, res, next) {
-    console.log("This is the one");
     return res.json(res.locals);
 }
 
