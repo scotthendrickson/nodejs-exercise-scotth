@@ -34,23 +34,24 @@ async function retrieveAllPlanets(req, res, next) {
 
 async function getAllPlanets(url, res, next){
     let all = [];
-    // let data = await retrievePlanets(url, res, next);
-    // all = all.push.apply(all, JSON.parse(data).results)
-    // let keepGoing = true
-    // while(keepGoing) {
-    //     console.log("Blarg Blarg Blarg");
-    //     let data = await retrievePlanets(data.results.next, res, next);
-    //     // data = await request(data.results.next, handleApiResponse(res, next));
-    //     await all.push.apply(all, JSON.parse(data).results)
-    //     if (JSON.parse(data).next !== null){
-    //         keepGoing = false;
-    //     }
-    // }
-    for (i = 1; i < 8; i++) {
-        console.log(i);
-        let data = await request(base_url + "planets/?page=" + i, handleApiResponse(res, next));
-        await all.push.apply(all, JSON.parse(data).results);
-    };
+    let data = await request(url, handleApiResponse(res, next));
+    await all.push.apply(all, JSON.parse(data).results);
+    let keepGoing = true
+    while(keepGoing) {
+        console.log("Blarg Blarg Blarg");
+        // let data = await retrievePlanets(data.results.next, res, next);
+        data = await request(JSON.parse(data).next, handleApiResponse(res, next));
+        await all.push.apply(all, JSON.parse(data).results)
+        console.log(JSON.parse(data).next);
+        if (JSON.parse(data).next == null){
+            keepGoing = false;
+        }
+    }
+    // for (i = 1; i < 8; i++) {
+    //     console.log(i);
+    //     let data = await request(base_url + "planets/?page=" + i, handleApiResponse(res, next));
+    //     await all.push.apply(all, JSON.parse(data).results);
+    // };
     res.locals.results = all;
     return next();
 }
