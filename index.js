@@ -12,24 +12,24 @@ app.get('/people',
     jsonResponse
 );
 
+app.get('/people/:sortby/',
+    retrieveAllPeople,
+    jsonResponse
+);
+
+app.get('/people/:sortby/:order',
+    retrieveAllPeople,
+    jsonResponse
+);
+
 app.get('/planets',
     retrieveAllPlanets,
     jsonResponse
 );
 
-// function retrieveAllPeople(req, res, next) {
-//     const url = base_url + "people/";
-//     request(url, handleApiResponse(res, next));
-// }
-
-// function retrieveAllPlanets(req, res, next) {
-//     const url = base_url + "planets/";
-//     request(url, handleApiResponse(res, next));
-// }
-
 async function retrieveAllPeople(req, res, next) {
     const url = base_url + "people/";
-    await getAllPeople(url, res, next);
+    await getAllPeople(url, req, res, next);
 }
 
 async function retrieveAllPlanets(req, res, next) {
@@ -37,7 +37,7 @@ async function retrieveAllPlanets(req, res, next) {
     await getAllPlanets(url, res, next);
 }
 
-async function getAllPeople(url, res, next) {
+async function getAllPeople(url, req, res, next) {
     let all = [];
     let data = await request(url, handleApiResponse(res, next));
     await all.push.apply(all, JSON.parse(data).results);
@@ -49,6 +49,13 @@ async function getAllPeople(url, res, next) {
             keepGoing = false;
         }
     }
+    if (req.params.sortby && !req.params.order) {
+        all.sort(compareValues(req.params.sortby));
+    } else if (req.params.sortby && req.params.order) {
+        all.sort(compareValues(req.params.sortby, req.params.order));
+    } else {
+        all.sort(compareValues("name"));
+    }
     res.locals.results = all;
     return next();
 }
@@ -57,13 +64,13 @@ async function getAllPlanets(url, res, next){
     let all = [];
     let data = await request(url, handleApiResponse(res, next));
     data = JSON.parse(data);
-    data = await getIndividualPeople(data, res, next);
+    data = await getResidentsNames(data, res, next);
     await all.push.apply(all, data.results);
     let keepGoing = true
     while(keepGoing) {
         data = await request(data.next, handleApiResponse(res, next));
         data = JSON.parse(data);
-        data = await getIndividualPeople(data, res, next);
+        data = await getResidentsNames(data, res, next);
         await all.push.apply(all, data.results)
         if (data.next == null){
             keepGoing = false;
@@ -73,7 +80,7 @@ async function getAllPlanets(url, res, next){
     return next();
 }
 
-async function getIndividualPeople(data, res, next){
+async function getResidentsNames(data, res, next){
     for (i = 0; i < data.results.length; i++) {
         for (x = 0; x < data.results[i].residents.length; x++) {
             let person = await request(data.results[i].residents[x], handleApiResponse(res, next));
@@ -81,6 +88,29 @@ async function getIndividualPeople(data, res, next){
         }
     }
     return data;
+}
+
+function compareValues(key, order = 'asc') {
+    return function (a, b) {
+        if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+            return 0;
+        }
+
+        const varA = (typeof a[key] === 'string') ?
+            a[key].toUpperCase() : a[key];
+        const varB = (typeof b[key] === 'string') ?
+            b[key].toUpperCase() : b[key];
+
+        let comparison = 0;
+        if (varA > varB) {
+            comparison = 1;
+        } else if (varA < varB) {
+            comparison = -1;
+        }
+        return (
+            (order == 'desc') ? (comparison * -1) : comparison
+        );
+    };
 }
 
 function handleApiResponse(res, next) {
